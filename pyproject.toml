@@ -1,0 +1,21 @@
+[project]
+name = "langchain-draw"
+version = "0.1.0"
+description = "AI-powered Visio diagram agent using LangChain + python-win32"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "langchain>=1.2.14",
+    "langchain-community>=0.4.1",
+    "langchain-core>=1.2.25",
+    "langchain-openai>=1.1.12",
+    "openai>=2.30.0",
+    "python-dotenv>=1.2.2",
+    "pywin32>=311",
+]
+
+[project.scripts]
+visio-agent = "main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
