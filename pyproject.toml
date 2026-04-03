@@ -5,6 +5,7 @@ description = "AI-powered Visio diagram agent using LangChain + python-win32"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "deepagents>=0.4.12",
     "langchain>=1.2.14",
     "langchain-community>=0.4.1",
     "langchain-core>=1.2.25",

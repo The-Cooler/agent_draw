@@ -1,0 +1,41 @@
+"""
+时序图 / 流程图占位工具：保留协议与 Agent 路由闭环，待模板与 Visio 实现后替换。
+"""
+
+from langchain_core.tools import tool
+
+
+@tool
+def sequence_draw(user: str, data: dict) -> dict:
+    """
+    时序图绘制（占位）。参数与 diagram_protocol 技能中 type=sequence 的 data 约定一致。
+
+    Args:
+        user: 顶层 JSON 的 user 字段
+        data: type=sequence 时的 data 对象
+
+    Returns:
+        {"success": bool, "message": str}
+    """
+    return {
+        "success": False,
+        "message": "时序图绘制尚未实现（占位工具）。",
+    }
+
+
+@tool
+def flowchart_draw(user: str, data: dict) -> dict:
+    """
+    流程图绘制（占位）。参数与 diagram_protocol 技能中 type=flowchart 的 data 约定一致。
+
+    Args:
+        user: 顶层 JSON 的 user 字段
+        data: type=flowchart 时的 data 对象
+
+    Returns:
+        {"success": bool, "message": str}
+    """
+    return {
+        "success": False,
+        "message": "流程图绘制尚未实现（占位工具）。",
+    }

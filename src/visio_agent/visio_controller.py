@@ -26,10 +26,7 @@ class VisioController:
 
     def _connect(self):
         """连接到 Visio 实例"""
-        try:
-            self.visio = win32com.client.Dispatch("Visio.Application")
-        except Exception:
-            self.visio = win32com.client.Dispatch("Visio.Application")
+        self.visio = win32com.client.Dispatch("Visio.Application")
         self.app = self.visio
         self.app.Visible = self.visible
 
@@ -70,6 +67,27 @@ class VisioController:
             raise RuntimeError(f"Page 对象无效: {type(self.page)}")
 
         return self.doc, self.page
+
+    def open(self, path: str):
+        """打开现有文档"""
+        try:
+            # 关闭当前文档
+            if self.doc:
+                self.doc.Close()
+            # 打开文件
+            self.doc = self.app.Documents.Open(os.path.abspath(path))
+            if not self.doc:
+                raise RuntimeError("无法打开文档")
+            # 获取页面
+            pages = self.doc.Pages
+            if pages.Count >= 1:
+                self.page = pages.ItemU(1)
+            if not self.page or not hasattr(self.page, 'DrawRectangle'):
+                raise RuntimeError("Page 对象无效")
+            return self.doc, self.page
+        except Exception as e:
+            print(f"打开文档失败: {e}")
+            raise
 
     def _parse_color(self, color_str: str) -> int:
         """解析颜色字符串为 RGB 整数"""

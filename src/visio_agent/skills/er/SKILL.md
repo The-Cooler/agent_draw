@@ -1,78 +1,69 @@
 ---
 name: er
-description: "Use this skill when the user asks to draw an ER diagram, entity-relationship diagram, or Chen notation diagram"
-allowed-tools: ["draw_er_diagram"]
+description: "当用户要求绘制 ER 图、实体-关系图时使用此技能"
 ---
 
-# ER 图技能
+# ER 图绘制技能
 
-## 概述
+## 与全局协议的关系
 
-本技能帮助从自然语言描述生成 Chen 风格的 ER 图（实体-关系图）。
+标准外部请求格式见 **diagram_protocol** 技能：`{"user", "type", "data"}`。当 `type` 为 `er` 时，`data` 为本技能下的结构化对象（`entity`、`attributes`）。本技能说明如何在该场景下正确调用 `er_draw`。
 
-## 数据格式
+## 输入格式
 
-draw_er_diagram 工具期望以下 JSON 结构：
+用户输入单个实体，属性使用列表格式：
+```
+实体"学生"：
+1. 学号pk
+2. 姓名
+3. 性别
+4. 年龄
+```
+
+或单行格式：
+```
+实体"学生"：[学号pk, 姓名, 性别, 年龄]
+```
+
+## 属性数量检查
+
+**必须先检查属性数量是否符合规定，才能填充：**
+- 奇数属性数量 → 使用 ER_odd 模板
+- 偶数属性数量 → 使用 ER_even 模板
+- **属性数量不能超过模板可容纳的最大数量**
+- 如果属性数量不符合规定，返回错误信息
+
+## 工具调用
+
+调用 `er_draw` 工具，参数必须正确：
 
 ```json
 {
-  "title": "图表标题",
-  "entities": [
-    {
-      "name": "实体名",
-      "attributes": [
-        {"name": "属性名", "type": "pk|fk|normal"}
-      ]
-    }
+  "entity": "学生",
+  "attributes": [
+    {"name": "学号", "type": "pk"},
+    {"name": "姓名", "type": "normal"},
+    {"name": "性别", "type": "normal"},
+    {"name": "年龄", "type": "normal"}
   ],
-  "relationships": [
-    {
-      "name": "关系名",
-      "entities": ["实体A", "实体B"],
-      "cardinality": "N:M",
-      "attributes": []
-    }
-  ]
+  "output_path": "学生.vsdx"
 }
 ```
 
-## Chen 符号规则
+## 错误示例（不要这样做）
 
-- **实体**：双边框矩形
-- **属性**：椭圆形状，主键 (PK) 带下划线，外键 (FK) 斜体
-- **关系**：菱形表示，标注基数 (1:1, 1:N, N:M, N:1)
+- output_path: "/学生.png" ❌
+- output_path: "/学生_ER图.txt" ❌
+- output_path: "/tmp/学生.vsdx" ❌
 
-## 属性类型
+## 正确示例
 
-- `pk`：主键属性（带下划线）
-- `fk`：外键属性（斜体）
-- `normal`：普通属性
+- output_path: "学生.vsdx" ✅（相对路径示例）
+- output_path: "课程.vsdx" ✅
+- 来自标准 JSON 时：使用 **绝对路径** `{项目根目录}/data/{user}/er/{entity}.vsdx`（见 diagram_protocol）✅
 
-## 关系基数
+## 重要
 
-- `1:1`：一对一
-- `1:N`：一对多
-- `N:1`：多对一
-- `N:M`：多对多
-
-## 工作流程
-
-1. 解析用户描述，识别所有实体及其属性
-2. 识别实体之间的关系
-3. 确定每个关系的基数
-4. **复制模板文件**：首先复制 `ER模板.vsdx` 作为基础
-5. **按顺序替换实体和属性 (1,2,3,4...)**：对于每个找到的实体：
-   - 如果实体已存在于模板中：保留
-   - 如果实体缺失：添加
-   - 如需替换实体名称
-   - 按编号顺序 (1→2→3→4) 替换/更新属性
-6. **删除多余属性**：如果模板有比需求更多的属性，删除多余部分
-7. 生成完整的JSON结构
-8. 调用 draw_er_diagram 工具
-
-## 模板使用
-
-- **模板文件**：`src/visio_agent/skills/er/ER模板.vsdx`
-- 始终先复制模板再进行修改
-- 属性按编号顺序排列 (1, 2, 3, 4...)
-- 删除任何与实际属性不对应的多余属性形状
+- output_path 必须以 .vsdx 结尾
+- 相对路径示例中不要加 `/` 前缀；标准 JSON 场景下使用协议给出的绝对路径
+- 不要用其他扩展名
