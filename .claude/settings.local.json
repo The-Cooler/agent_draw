@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(uv add:*)",
-      "Bash(uv run:*)"
+      "Bash(uv run:*)",
+      "Bash(python -m py_compile src/visio_agent/skills/sequence/tools.py)",
+      "Bash(python test.py)"
     ]
   }
 }

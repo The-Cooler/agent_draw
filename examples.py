@@ -1,57 +1,25 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-"""
-模拟外部传入的 JSON，经 Agent 按 type 选择工具处理（无本地路由表）。
-"""
-import json
-import os
-import sys
+"""时序图工具测试 - 由 Agent 智能判断流程类型"""
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
+from src.visio_agent.agent import create_agent
 
-from langchain_core.messages import AIMessage
+# 创建 agent（会加载 skills/sequence/SKILL.md）
+agent = create_agent()
 
-from visio_agent.agent import create_agent
+# 测试用例 - 只需描述业务，agent 自动判断单程还是双程
+test_prompts = [
+    '特色分类管理模块通过预定义分类标签对资源进行结构化管理，并结合用户点击量、点赞量等行为数据生成推荐结果。系统采用前后端分离架构，前端请求分类数据，后端控制器调用服务层查询分类及资源信息，并依据热度指标进行排序处理，最终以JSON格式返回前端渲染。特色分类管理时序图如图4-1所示。'
+]
 
+print("=== 测试 Agent 智能判断 ===\n")
 
-def _print_invoke_result(result: dict) -> None:
-    msgs = result.get("messages") or []
-    for m in reversed(msgs):
-        if isinstance(m, AIMessage):
-            print(m.content)
-            return
-    print(result)
-
-
-if __name__ == "__main__":
-    project_root = os.path.abspath(os.path.dirname(__file__))
-    json_input = {
-        "user": "张三",
-        "type": "er",
-        "data": {
-            "entity": "学生",
-            "attributes": [
-                {"name": "学号", "type": "pk"},
-                {"name": "姓名", "type": "normal"},
-                {"name": "性别", "type": "normal"},
-                {"name": "年龄", "type": "normal"},
-            ],
-        },
-    }
-
-    user_content = (
-        "请根据以下 JSON 处理绘图请求：按 type 字段选择唯一对应的工具，遵守 diagram_protocol 技能中的路径约定。\n\n"
-        f"项目根目录: {project_root}\n\n"
-        f"{json.dumps(json_input, ensure_ascii=False)}"
-    )
-
-    print("输入:", json_input)
-    print("-" * 50)
-
-    agent = create_agent()
-    result = agent.invoke(
-        {"messages": [{"role": "user", "content": user_content}]},
-        config={"configurable": {"thread_id": "examples"}},
-    )
-    print("结果:")
-    _print_invoke_result(result)
+for prompt in test_prompts:
+    print(f"用户: {prompt}")
+    for chunk in agent.stream({"messages": [("user", prompt)]}):
+        # 只打印有意义的文本内容
+        if isinstance(chunk, dict):
+            for key, value in chunk.items():
+                if hasattr(value, 'content') and value.content:
+                    print(value.content, end="", flush=True)
+                elif isinstance(value, str) and value.strip():
+                    print(value, end="", flush=True)
+    print()

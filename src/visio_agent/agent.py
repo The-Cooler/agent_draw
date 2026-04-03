@@ -16,6 +16,7 @@ def create_agent() -> any:
     from langchain_openai import ChatOpenAI
     from .skills.diagram_protocol.stub_tools import flowchart_draw, sequence_draw
     from .skills.er.tools import er_draw
+    from .skills.sequence.tools import sequence_draw, check_message_count, check_message_length
 
     skills_dir = os.path.join(os.path.dirname(__file__), "skills")
 
@@ -28,7 +29,7 @@ def create_agent() -> any:
 
     agent = create_deep_agent(
         model=llm,
-        tools=[er_draw, sequence_draw, flowchart_draw],
+        tools=[er_draw, sequence_draw, check_message_count, check_message_length],
         skills=[skills_dir],
     )
 
