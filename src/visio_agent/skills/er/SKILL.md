@@ -1,69 +1,37 @@
 ---
 name: er
-description: "当用户要求绘制 ER 图、实体-关系图时使用此技能"
+description: "当用户要画 ER 图、实体-关系图时启用：先通过校验再调 er_draw"
 ---
 
-# ER 图绘制技能
+# ER 图
 
-## 与全局协议的关系
+## 与 diagram_protocol 的衔接
 
-标准外部请求格式见 **diagram_protocol** 技能：`{"user", "type", "data"}`。当 `type` 为 `er` 时，`data` 为本技能下的结构化对象（`entity`、`attributes`）。本技能说明如何在该场景下正确调用 `er_draw`。
+若本任务带顶层 JSON：须 **`validate_diagram_request` 返回 valid** 后再调 **`er_draw`**。
 
-## 输入格式
+## 从用户话里抽 entity / attributes
 
-用户输入单个实体，属性使用列表格式：
-```
-实体"学生"：
-1. 学号pk
-2. 姓名
-3. 性别
-4. 年龄
-```
+列表或单行里出现实体名、属性列表时，映射到 `data.entity` 与 `data.attributes`（每项必有 `name`；`type` 仅在为 **`pk`** 时表示主键，其它可省略，**不要**强行区分 fk / normal）。
 
-或单行格式：
-```
-实体"学生"：[学号pk, 姓名, 性别, 年龄]
-```
+## 语言与命名（与校验一致）
 
-## 属性数量检查
+- **实体名 `entity`**：须含中文（CJK 表意文字）。
+- **属性 `name`**：须含中文；**仅当**属性名为 **`ID` 或 `id`（大小写不敏感）** 时，允许全英文等非中文。
+- 交给 **`er_draw` 的 `name` 字符串**：原样写入图内显示，**不要**改写、翻译、截断或换别的词。
 
-**必须先检查属性数量是否符合规定，才能填充：**
-- 奇数属性数量 → 使用 ER_odd 模板
-- 偶数属性数量 → 使用 ER_even 模板
-- **属性数量不能超过模板可容纳的最大数量**
-- 如果属性数量不符合规定，返回错误信息
+## 数量与模板
 
-## 工具调用
+- **`data.attributes` 至多 10 条**，超出则 **`validate_diagram_request` 失败**，须让用户删减后再校验。
+- 选 **ER_odd / ER_even** 按**属性条数**奇偶决定。
+- 写入时 **主键排第一**，其余保持传入顺序；`name` 原样写入。
 
-调用 `er_draw` 工具，参数必须正确：
+## er_draw 调用
 
-```json
-{
-  "entity": "学生",
-  "attributes": [
-    {"name": "学号", "type": "pk"},
-    {"name": "姓名", "type": "normal"},
-    {"name": "性别", "type": "normal"},
-    {"name": "年龄", "type": "normal"}
-  ],
-  "output_path": "学生.vsdx"
-}
-```
+传入四个参数（**不要**自拼文件路径）：
 
-## 错误示例（不要这样做）
+1. **`project_root`**：用户消息里给出的项目根目录绝对路径，须**逐字一致**。
+2. **`user`**：校验通过的顶层 `user`。
+3. **`entity`**：校验通过的 `data.entity`。
+4. **`attributes`**：校验通过的 `data.attributes`。
 
-- output_path: "/学生.png" ❌
-- output_path: "/学生_ER图.txt" ❌
-- output_path: "/tmp/学生.vsdx" ❌
-
-## 正确示例
-
-- output_path: "学生.vsdx" ✅（相对路径示例）
-- output_path: "课程.vsdx" ✅
-- 来自标准 JSON 时：使用 **绝对路径** `{项目根目录}/data/{user}/er/{entity}.vsdx`（见 diagram_protocol）✅
-
-## 重要
-
-- output_path 必须以 .vsdx 结尾
-- 相对路径示例中不要加 `/` 前缀；标准 JSON 场景下使用协议给出的绝对路径
-- 不要用其他扩展名
+保存路径由工具内部固定：`{project_root}/data/{user}/er/{entity}.vsdx`。
