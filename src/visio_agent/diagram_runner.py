@@ -39,7 +39,7 @@ class DiagramAgentRunner:
 - 根据自然语言判断图类型，整理顶层 JSON（user / type / data），先 validate_diagram_request 直至 valid。
 - type=er 时调用 **er_draw**，参数为：**project_root**（必须与下方「项目根目录」字符串完全一致）、**user**（顶层 user）、**entity**（data.entity）、**attributes**（data.attributes）。**不要**传入或自拼 output_path；文件路径由工具在代码里固定为 {pr_norm}/data/<user>/er/<entity>.vsdx。
 - type=sequence 时调用 **sequence_draw**：**project_root**、**user**、**title**（data.title）、**trip**（data.trip）、**messages**（data.messages）；保存路径固定为 {pr_norm}/data/<user>/sequence/<title>.vsdx。
-- type=flowchart 仍用占位工具 flowchart_draw；若未实现须如实说明。
+- type=flowchart 时调用 **flowchart_draw**：**project_root**、**user**、**title**（data.title）、**template**（data.template：1 或 2）、**nodes**（data.nodes）；保存路径固定为 {pr_norm}/data/<user>/flowchart/<title>.vsdx。可先 **check_flowchart_nodes** 自查 nodes。
 
 【自然语言】
 {natural_language.strip()}"""

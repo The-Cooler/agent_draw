@@ -6,7 +6,7 @@ ER（type=er）：实体名与各属性 name 须含中文，属性名仅为 ID/i
 保存路径约定：
   ER:        由 er_draw 在代码内拼接为 {project_root}/data/{user}/er/{entity}.vsdx
   sequence:  由 sequence_draw 在代码内拼接为 {project_root}/data/{user}/sequence/{title}.vsdx
-  flowchart: {project_root}/data/{user}/flowchart/{title}.vsdx（占位工具尚未写入）
+  flowchart:  由 flowchart_draw 在代码内拼接为 {project_root}/data/{user}/flowchart/{title}.vsdx
 """
 
 import json
@@ -103,39 +103,12 @@ def _validate_sequence(data: Any) -> list[str]:
 
 
 def _validate_flowchart(data: Any) -> list[str]:
-    errs: list[str] = []
     if not isinstance(data, dict):
-        errs.append("data 必须是对象")
-        return errs
-    errs.extend(_validate_title_filename(data.get("title"), "flowchart"))
-    steps = data.get("steps")
-    if not isinstance(steps, list) or len(steps) < 1:
-        errs.append("flowchart: data.steps 必须为非空数组")
-    else:
-        for i, s in enumerate(steps):
-            if not isinstance(s, dict):
-                errs.append(f"flowchart: steps[{i}] 必须是对象")
-                continue
-            sid = s.get("id")
-            lab = s.get("label")
-            if not isinstance(sid, str) or not sid.strip():
-                errs.append(f"flowchart: steps[{i}].id 必须为非空字符串")
-            if not isinstance(lab, str) or not lab.strip():
-                errs.append(f"flowchart: steps[{i}].label 必须为非空字符串")
-    edges = data.get("edges", [])
-    if edges is None:
-        edges = []
-    if not isinstance(edges, list):
-        errs.append("flowchart: data.edges 必须为数组")
-        return errs
-    for i, e in enumerate(edges):
-        if not isinstance(e, dict):
-            errs.append(f"flowchart: edges[{i}] 必须是对象")
-            continue
-        if not isinstance(e.get("from"), str) or not e["from"].strip():
-            errs.append(f"flowchart: edges[{i}].from 必须为非空字符串")
-        if not isinstance(e.get("to"), str) or not e["to"].strip():
-            errs.append(f"flowchart: edges[{i}].to 必须为非空字符串")
+        return ["data 必须是对象"]
+    from ..flowchart.spec import validate_flowchart_content
+
+    errs = _validate_title_filename(data.get("title"), "flowchart")
+    errs.extend(validate_flowchart_content(data))
     return errs
 
 
@@ -144,7 +117,7 @@ def validate_diagram_request(json_text: str) -> dict:
     """
     校验顶层绘图 JSON 字符串。规则见本模块源码。
 
-    返回：valid、errors、parsed、hint。valid 为 true 后再调用 er_draw / sequence_draw / flowchart_draw。
+    返回：valid、errors、parsed、hint。valid 为 true 后再调用 er_draw / sequence_draw / flowchart_draw。流程图可先用 check_flowchart_nodes 预检 nodes。
     """
     errors: list[str] = []
     try:

@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
+from langchain.agents.middleware import InterruptOnConfig
+from langgraph.checkpoint.memory import MemorySaver
 
 load_dotenv()
 
@@ -23,8 +25,18 @@ _VISIO_PATH_RULES = """## Visio 绘图助手（路径约定）
 
 - 用户消息中的 **本机绝对路径**（Windows 如 `D:\\...`，Linux/macOS 如 `/home/...`）**只**作为 **`er_draw` 的 `project_root` 参数**（写 .vsdx）；**不要**把它传给内置文件工具 `ls` / `glob` / `read_file` / `write_file` / `edit_file`（这些工具只接受以 **`/`** 开头的虚拟路径）。
 - 当前工作区挂载在虚拟路径 **`/`** 下（对应本机上的项目根目录）；例如浏览根目录用 **`/`**，源码多在 **`/src`**。
-- 画 ER / 时序图通常**不需要**浏览磁盘：校验通过后分别调 `er_draw`、`sequence_draw`（`project_root` 同上；保存路径由工具固定，见各技能）。
+- 画 ER / 时序图 / 流程图：校验通过后分别调 `er_draw`、`sequence_draw`、`flowchart_draw`（`project_root` 同上；保存路径由工具固定，见各技能）。
 """
+
+# Deep Agent 内置 shell 工具名固定为 execute；须经人工审批后方可真正执行
+_INTERRUPT_ON_EXECUTE: dict[str, bool | InterruptOnConfig] = {
+    "execute": InterruptOnConfig(
+        allowed_decisions=["approve", "reject", "edit"],
+        description=(
+            "模型请求执行系统命令（execute）。请确认后选择：同意执行、修改命令与参数后再执行、或拒绝。"
+        ),
+    ),
+}
 
 
 def _build_visio_system_prompt() -> str:
@@ -47,7 +59,7 @@ def create_agent(project_root: str | None = None) -> Any:
     from deepagents.backends.filesystem import FilesystemBackend
     from langchain_openai import ChatOpenAI
 
-    from .skills.diagram_protocol.stub_tools import flowchart_draw
+    from .skills.flowchart.tools import check_flowchart_nodes, flowchart_draw
     from .skills.sequence.tools import sequence_draw
     from .skills.diagram_protocol.validate_tool import validate_diagram_request
     from .skills.er.tools import er_draw
@@ -77,6 +89,7 @@ def create_agent(project_root: str | None = None) -> Any:
         model=llm,
         tools=[
             validate_diagram_request,
+            check_flowchart_nodes,
             er_draw,
             sequence_draw,
             flowchart_draw,
@@ -84,6 +97,8 @@ def create_agent(project_root: str | None = None) -> Any:
         skills=[skills_virt],
         backend=backend_factory,
         system_prompt=_build_visio_system_prompt(),
+        checkpointer=MemorySaver(),
+        interrupt_on=_INTERRUPT_ON_EXECUTE,
     )
 
     return agent
